@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CySA+ Port Security Game</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #111827;
+      --border: #1e293b;
+      --accent: #22d3ee;
+      --accent2: #a78bfa;
+      --success: #34d399;
+      --danger: #f87171;
+      --warn: #fbbf24;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 {
+      font-size: 1.85rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.35rem;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.6rem 1.1rem;
+      min-width: 110px;
+      text-align: center;
+    }
+    .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat .value { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    button {
+      background: linear-gradient(135deg, #0e7490, #6d28d9);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 1.15rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(34, 211, 238, 0.25); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    button.secondary:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+    .mode-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 0.4rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .mode-tabs button {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.45rem 0.9rem;
+      font-size: 0.85rem;
+    }
+    .mode-tabs button.active {
+      background: rgba(34, 211, 238, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .game-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 720px) {
+      .game-area { grid-template-columns: 1fr; }
+    }
+    .column {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .column h3 {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      text-align: center;
+    }
+    .item {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 0.92rem;
+      user-select: none;
+    }
+    .item:hover { border-color: var(--accent); background: rgba(34, 211, 238, 0.06); }
+    .item.selected {
+      border-color: var(--accent);
+      background: rgba(34, 211, 238, 0.15);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .item.correct {
+      border-color: var(--success);
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--success);
+      pointer-events: none;
+      opacity: 0.85;
+    }
+    .item.wrong {
+      border-color: var(--danger);
+      background: rgba(248, 113, 113, 0.12);
+      animation: shake 0.35s;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+    .item.matched { opacity: 0.4; pointer-events: none; }
+    .feedback {
+      text-align: center;
+      min-height: 1.6rem;
+      margin: 0.75rem 0;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .feedback.good { color: var(--success); }
+    .feedback.bad { color: var(--danger); }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 1rem;
+    }
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+    .modal h2 { margin-bottom: 0.75rem; font-size: 1.4rem; }
+    .modal p { color: var(--muted); margin-bottom: 1.25rem; }
+    .modal .big-score {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 0.5rem 0 1rem;
+    }
+    .hidden { display: none !important; }
+    .study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-top: 0.5rem;
+    }
+    .study-table th, .study-table td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+    }
+    .study-table th {
+      background: #0f172a;
+      color: var(--accent);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    .study-table tr:nth-child(even) { background: rgba(15, 23, 42, 0.5); }
+    .study-table .note { color: var(--muted); font-size: 0.8rem; }
+    .secure { color: var(--success); }
+    .insecure { color: var(--danger); }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      margin-left: 0.35rem;
+      font-weight: 600;
+    }
+    .badge.sec { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+    .badge.ins { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+    .badge.ioc { background: rgba(251, 191, 36, 0.15); color: var(--warn); }
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 0.75rem 0 1rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s;
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CySA+ Port Security Game</h1>
+      <p>Match ports ↔ services · Spot unexpected activity · Master the indicators CompTIA actually tests</p>
+    </header>
+
+    <div class="mode-tabs">
+      <button id="btn-match" class="active" onclick="setMode('match')">Match Ports</button>
+      <button id="btn-security" onclick="setMode('security')">Secure vs Insecure</button>
+      <button id="btn-ioc" onclick="setMode('ioc')">Unexpected Ports (IOC)</button>
+      <button id="btn-study" onclick="setMode('study')">Study Reference</button>
+    </div>
+
+    <div class="stats" id="stats-bar">
+      <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+      <div class="stat"><div class="label">Correct</div><div class="value" id="correct">0</div></div>
+      <div class="stat"><div class="label">Wrong</div><div class="value" id="wrong">0</div></div>
+      <div class="stat"><div class="label">Time</div><div class="value" id="timer">00:00</div></div>
+      <div class="stat"><div class="label">Remaining</div><div class="value" id="remaining">0</div></div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+    <div class="controls" id="controls">
+      <button id="btn-start" onclick="startGame()">Start Game</button>
+      <button id="btn-reset" class="secondary" onclick="resetGame()" disabled>Reset</button>
+      <button id="btn-hint" class="secondary" onclick="showHint()" disabled>Hint</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <!-- MATCH MODE -->
+    <div id="match-area" class="game-area">
+      <div class="column">
+        <h3>Ports</h3>
+        <div id="ports-list"></div>
+      </div>
+      <div class="column">
+        <h3>Services</h3>
+        <div id="services-list"></div>
+      </div>
+    </div>
+
+    <!-- SECURITY MODE -->
+    <div id="security-area" class="game-area hidden">
+      <div class="column" style="grid-column: 1 / -1;">
+        <h3>Is this protocol Secure or Insecure?</h3>
+        <div id="security-question" style="text-align:center; padding:1.5rem; font-size:1.2rem;"></div>
+        <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem;">
+          <button onclick="answerSecurity(true)" style="background:linear-gradient(135deg,#059669,#10b981);">Secure</button>
+          <button onclick="answerSecurity(false)" style="background:linear-gradient(135deg,#dc2626,#ef4444);">Insecure</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IOC MODE -->
+    <div id="ioc-area" class="game-area hidden">
+      <div class="column" style="grid-column: 1 / -1;">
+        <h3>Unexpected Port Activity — Is this an IOC?</h3>
+        <div id="ioc-question" style="text-align:center; padding:1.5rem; font-size:1.1rem;"></div>
+        <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem;">
+          <button onclick="answerIoc(true)" style="background:linear-gradient(135deg,#d97706,#f59e0b);">Suspicious / IOC</button>
+          <button onclick="answerIoc(false)" style="background:linear-gradient(135deg,#0e7490,#06b6d4);">Expected / Normal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDY MODE -->
+    <div id="study-area" class="hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1rem; max-height:70vh; overflow:auto;">
+      <table class="study-table">
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Service</th>
+            <th>Security Notes (CySA+ relevance)</th>
+          </tr>
+        </thead>
+        <tbody id="study-body"></tbody>
+      </table>
+    </div>
+
+    <footer>
+      Built for CompTIA CySA+ (CS0-003 / CS0-004) · Focus on activity on unexpected ports, secure alternatives &amp; common services in SIEM / packet analysis scenarios
+    </footer>
+  </div>
+
+  <!-- End-of-game modal -->
+  <div id="end-modal" class="overlay hidden">
+    <div class="modal">
+      <h2>Round Complete</h2>
+      <div class="big-score" id="final-score">0</div>
+      <p id="final-msg"></p>
+      <button onclick="startGame()">Play Again</button>
+      <button class="secondary" style="margin-left:0.5rem;" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // ========== DATA ==========
+    // Comprehensive list of ports that appear (or are highly relevant) for CySA+
+    const PORTS = [
+      { port: "20/21 TCP", service: "FTP", secure: false, note: "Cleartext credentials & data. Prefer SFTP/FTPS. Unexpected FTP is often an IOC." },
+      { port: "22 TCP", service: "SSH / SFTP / SCP", secure: true, note: "Secure remote access & file transfer. Common target for brute-force; monitor for anomalies." },
+      { port: "23 TCP", service: "Telnet", secure: false, note: "Unencrypted remote access. Almost never legitimate in modern environments → strong IOC." },
+      { port: "25 TCP", service: "SMTP", secure: false, note: "Email transfer. Open relays & unexpected outbound SMTP are classic IOCs." },
+      { port: "53 TCP/UDP", service: "DNS", secure: false, note: "Name resolution. DNS tunneling / unusual queries are key CySA+ indicators." },
+      { port: "67/68 UDP", service: "DHCP", secure: false, note: "IP assignment. Rogue DHCP servers are a classic network IOC." },
+      { port: "69 UDP", service: "TFTP", secure: false, note: "Trivial file transfer (no auth). Rarely legitimate → often malware staging." },
+      { port: "80 TCP", service: "HTTP", secure: false, note: "Cleartext web. Prefer HTTPS. Unexpected HTTP services can indicate web shells." },
+      { port: "88 TCP/UDP", service: "Kerberos", secure: true, note: "AD authentication. Kerberoasting & ticket abuse are common attack techniques." },
+      { port: "110 TCP", service: "POP3", secure: false, note: "Email retrieval (cleartext). Prefer POP3S." },
+      { port: "123 UDP", service: "NTP", secure: false, note: "Time sync. Amplification attacks & time desync can hide other activity." },
+      { port: "137-139 TCP/UDP", service: "NetBIOS", secure: false, note: "Legacy Windows name/session services. Often blocked; unexpected use is suspicious." },
+      { port: "143 TCP", service: "IMAP", secure: false, note: "Email access (cleartext). Prefer IMAPS." },
+      { port: "161/162 UDP", service: "SNMP", secure: false, note: "Device monitoring. Default community strings are a common finding; v3 is preferred." },
+      { port: "389 TCP/UDP", service: "LDAP", secure: false, note: "Directory services. Anonymous binds & injection are frequent findings." },
+      { port: "443 TCP", service: "HTTPS", secure: true, note: "Encrypted web. Most common C2 channel; look for beaconing & anomalous SNI." },
+      { port: "445 TCP", service: "SMB / CIFS", secure: false, note: "Windows file sharing. EternalBlue, lateral movement, and ransomware love this port." },
+      { port: "465 TCP", service: "SMTPS", secure: true, note: "SMTP over TLS (implicit). Secure email submission alternative." },
+      { port: "514 UDP", service: "Syslog", secure: false, note: "Log collection. Critical for SIEM ingestion; protect integrity & availability." },
+      { port: "587 TCP", service: "SMTP Submission", secure: true, note: "Authenticated email submission (usually STARTTLS). Preferred over 25 for clients." },
+      { port: "636 TCP", service: "LDAPS", secure: true, note: "LDAP over TLS. Preferred over cleartext LDAP (389)." },
+      { port: "993 TCP", service: "IMAPS", secure: true, note: "IMAP over TLS. Secure email retrieval." },
+      { port: "995 TCP", service: "POP3S", secure: true, note: "POP3 over TLS. Secure email retrieval." },
+      { port: "1433 TCP", service: "Microsoft SQL Server", secure: false, note: "Database. Frequently targeted; restrict exposure and enforce encryption." },
+      { port: "1521 TCP", service: "Oracle Database", secure: false, note: "Oracle listener. Appears in nmap scenarios on CySA+ practice tests." },
+      { port: "1723 TCP", service: "PPTP", secure: false, note: "Legacy VPN. Weak crypto; should be replaced by modern VPN protocols." },
+      { port: "1812/1813 UDP", service: "RADIUS", secure: true, note: "AAA services. Common in 802.1X / NAC environments." },
+      { port: "3389 TCP", service: "RDP", secure: true, note: "Remote Desktop. Extremely common brute-force & lateral movement target." },
+      { port: "5060 TCP/UDP", service: "SIP", secure: false, note: "VoIP signaling. Toll fraud and scanning are common abuse cases." },
+      { port: "4444 TCP", service: "Metasploit (default)", secure: false, note: "Classic Meterpreter reverse shell port. Almost always malicious if unexpected." }
+    ];
+
+    // IOC scenarios for the third mode
+    const IOC_SCENARIOS = [
+      { text: "Outbound connection from a workstation to an external IP on TCP/4444", ioc: true, why: "4444 is the classic Metasploit Meterpreter port — almost never legitimate." },
+      { text: "HTTPS traffic (TCP/443) from a web server to known CDN endpoints during business hours", ioc: false, why: "Normal encrypted web traffic." },
+      { text: "Telnet (TCP/23) session initiated from an internal host to a network device", ioc: true, why: "Telnet is cleartext and almost never acceptable in modern environments." },
+      { text: "DNS queries (UDP/53) to the organization's configured recursive resolvers", ioc: false, why: "Expected DNS behavior." },
+      { text: "Large volume of outbound SMTP (TCP/25) from a user workstation", ioc: true, why: "Workstations should not relay mail; classic spam/malware indicator." },
+      { text: "RDP (TCP/3389) from a jump host to internal servers after MFA", ioc: false, why: "Expected remote administration path when properly controlled." },
+      { text: "SMB (TCP/445) connections between workstations on different VLANs", ioc: true, why: "Lateral movement indicator; SMB should be tightly restricted." },
+      { text: "NTP (UDP/123) traffic to authorized time servers", ioc: false, why: "Normal time synchronization." },
+      { text: "TFTP (UDP/69) transfer from an unknown internal host to a server", ioc: true, why: "TFTP has no authentication and is rarely used legitimately outside controlled imaging." },
+      { text: "LDAPS (TCP/636) queries from domain controllers to each other", ioc: false, why: "Expected secure directory traffic." },
+      { text: "HTTP (TCP/80) service suddenly listening on a database server", ioc: true, why: "Unexpected service / possible web shell or backdoor." },
+      { text: "SSH (TCP/22) from a bastion host to production Linux servers", ioc: false, why: "Normal secure remote administration." },
+      { text: "Beaconing every 60 seconds to an external IP on a high ephemeral port", ioc: true, why: "Classic C2 beaconing pattern on non-standard port." },
+      { text: "SNMP (UDP/161) polls from the monitoring server using SNMPv3", ioc: false, why: "Expected monitoring traffic." },
+      { text: "PPTP (TCP/1723) VPN connection from an external IP", ioc: true, why: "Legacy insecure VPN protocol; should be blocked." }
+    ];
+
+    // ========== STATE ==========
+    let mode = 'match';
+    let score = 0, correct = 0, wrong = 0;
+    let selectedPort = null, selectedService = null;
+    let pairs = [];
+    let matchedCount = 0;
+    let timerInterval = null;
+    let seconds = 0;
+    let gameActive = false;
+    let securityIndex = 0;
+    let securityOrder = [];
+    let iocIndex = 0;
+    let iocOrder = [];
+
+    // ========== UTIL ==========
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const sec = (s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    function updateStats() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('correct').textContent = correct;
+      document.getElementById('wrong').textContent = wrong;
+      document.getElementById('timer').textContent = formatTime(seconds);
+      const total = mode === 'match' ? pairs.length : (mode === 'security' ? securityOrder.length : iocOrder.length);
+      const done = mode === 'match' ? matchedCount : (mode === 'security' ? securityIndex : iocIndex);
+      document.getElementById('remaining').textContent = Math.max(0, total - done);
+      const pct = total ? (done / total) * 100 : 0;
+      document.getElementById('progress').style.width = pct + '%';
+    }
+
+    function setFeedback(msg, good) {
+      const el = document.getElementById('feedback');
+      el.textContent = msg;
+      el.className = 'feedback ' + (good ? 'good' : 'bad');
+    }
+
+    // ========== MODE SWITCH ==========
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('.mode-tabs button').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-' + (m === 'match' ? 'match' : m === 'security' ? 'security' : m === 'ioc' ? 'ioc' : 'study')).classList.add('active');
+
+      document.getElementById('match-area').classList.toggle('hidden', m !== 'match');
+      document.getElementById('security-area').classList.toggle('hidden', m !== 'security');
+      document.getElementById('ioc-area').classList.toggle('hidden', m !== 'ioc');
+      document.getElementById('study-area').classList.toggle('hidden', m !== 'study');
+      document.getElementById('stats-bar').classList.toggle('hidden', m === 'study');
+      document.getElementById('controls').classList.toggle('hidden', m === 'study');
+      document.getElementById('feedback').classList.toggle('hidden', m === 'study');
+      document.querySelector('.progress-bar').classList.toggle('hidden', m === 'study');
+
+      if (m === 'study') {
+        renderStudy();
+        stopTimer();
+      } else {
+        resetGame();
+      }
+    }
+
+    // ========== MATCH MODE ==========
+    function startMatch() {
+      pairs = shuffle(PORTS).slice(0, 20); // 20 pairs like the PurposeGames example
+      matchedCount = 0;
+      selectedPort = null;
+      selectedService = null;
+      renderMatchLists();
+      updateStats();
+    }
+
+    function renderMatchLists() {
+      const portsEl = document.getElementById('ports-list');
+      const servicesEl = document.getElementById('services-list');
+      portsEl.innerHTML = '';
+      servicesEl.innerHTML = '';
+
+      const portOrder = shuffle(pairs);
+      const serviceOrder = shuffle(pairs);
+
+      portOrder.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.dataset.id = p.port;
+        div.textContent = p.port;
+        div.onclick = () => selectPort(div, p);
+        portsEl.appendChild(div);
+      });
+
+      serviceOrder.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.dataset.id = p.port;
+        div.textContent = p.service;
+        div.onclick = () => selectService(div, p);
+        servicesEl.appendChild(div);
+      });
+    }
+
+    function selectPort(el, data) {
+      if (!gameActive || el.classList.contains('correct')) return;
+      document.querySelectorAll('#ports-list .item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedPort = { el, data };
+      tryMatch();
+    }
+
+    function selectService(el, data) {
+      if (!gameActive || el.classList.contains('correct')) return;
+      document.querySelectorAll('#services-list .item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedService = { el, data };
+      tryMatch();
+    }
+
+    function tryMatch() {
+      if (!selectedPort || !selectedService) return;
+      if (selectedPort.data.port === selectedService.data.port) {
+        selectedPort.el.classList.add('correct');
+        selectedService.el.classList.add('correct');
+        selectedPort.el.classList.remove('selected');
+        selectedService.el.classList.remove('selected');
+        score += 10;
+        correct++;
+        matchedCount++;
+        setFeedback(`Correct! ${selectedPort.data.port} → ${selectedPort.data.service}`, true);
+        selectedPort = null;
+        selectedService = null;
+        updateStats();
+        if (matchedCount >= pairs.length) endGame();
+      } else {
+        selectedPort.el.classList.add('wrong');
+        selectedService.el.classList.add('wrong');
+        score = Math.max(0, score - 3);
+        wrong++;
+        setFeedback('Not a match — try again', false);
+        setTimeout(() => {
+          selectedPort.el.classList.remove('wrong', 'selected');
+          selectedService.el.classList.remove('wrong', 'selected');
+          selectedPort = null;
+          selectedService = null;
+        }, 500);
+        updateStats();
+      }
+    }
+
+    // ========== SECURITY MODE ==========
+    function startSecurity() {
+      securityOrder = shuffle(PORTS.filter(p => p.secure !== undefined));
+      securityIndex = 0;
+      showSecurityQuestion();
+    }
+
+    function showSecurityQuestion() {
+      if (securityIndex >= securityOrder.length) {
+        endGame();
+        return;
+      }
+      const p = securityOrder[securityIndex];
+      document.getElementById('security-question').innerHTML =
+        `<strong>${p.port}</strong><br>${p.service}<br><span style="font-size:0.9rem;color:var(--muted);">${p.note}</span>`;
+      updateStats();
+    }
+
+    function answerSecurity(isSecure) {
+      if (!gameActive) return;
+      const p = securityOrder[securityIndex];
+      if (isSecure === p.secure) {
+        score += 8;
+        correct++;
+        setFeedback(p.secure ? 'Correct — this is considered secure' : 'Correct — this is insecure', true);
+      } else {
+        score = Math.max(0, score - 4);
+        wrong++;
+        setFeedback(p.secure ? 'Incorrect — this protocol is secure' : 'Incorrect — this protocol is insecure / cleartext', false);
+      }
+      securityIndex++;
+      updateStats();
+      setTimeout(showSecurityQuestion, 700);
+    }
+
+    // ========== IOC MODE ==========
+    function startIoc() {
+      iocOrder = shuffle(IOC_SCENARIOS);
+      iocIndex = 0;
+      showIocQuestion();
+    }
+
+    function showIocQuestion() {
+      if (iocIndex >= iocOrder.length) {
+        endGame();
+        return;
+      }
+      const s = iocOrder[iocIndex];
+      document.getElementById('ioc-question').innerHTML =
+        `<div style="max-width:540px;margin:0 auto;">${s.text}</div>`;
+      updateStats();
+    }
+
+    function answerIoc(isIoc) {
+      if (!gameActive) return;
+      const s = iocOrder[iocIndex];
+      if (isIoc === s.ioc) {
+        score += 10;
+        correct++;
+        setFeedback('Correct! ' + s.why, true);
+      } else {
+        score = Math.max(0, score - 5);
+        wrong++;
+        setFeedback('Not quite. ' + s.why, false);
+      }
+      iocIndex++;
+      updateStats();
+      setTimeout(showIocQuestion, 900);
+    }
+
+    // ========== STUDY ==========
+    function renderStudy() {
+      const tbody = document.getElementById('study-body');
+      tbody.innerHTML = '';
+      PORTS.forEach(p => {
+        const tr = document.createElement('tr');
+        const secBadge = p.secure
+          ? '<span class="badge sec">Secure</span>'
+          : '<span class="badge ins">Insecure</span>';
+        const iocBadge = (p.port.includes('4444') || p.port.includes('23 ') || p.port.includes('69 ') || p.port.includes('1723'))
+          ? '<span class="badge ioc">Common IOC</span>' : '';
+        tr.innerHTML = `
+          <td><strong>${p.port}</strong></td>
+          <td>${p.service} ${secBadge}${iocBadge}</td>
+          <td class="note">${p.note}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ========== GAME CONTROL ==========
+    function startGame() {
+      score = 0; correct = 0; wrong = 0; seconds = 0;
+      gameActive = true;
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-reset').disabled = false;
+      document.getElementById('btn-hint').disabled = mode !== 'match';
+      document.getElementById('end-modal').classList.add('hidden');
+      setFeedback('', true);
+      stopTimer();
+      timerInterval = setInterval(() => {
+        seconds++;
+        updateStats();
+      }, 1000);
+
+      if (mode === 'match') startMatch();
+      else if (mode === 'security') startSecurity();
+      else if (mode === 'ioc') startIoc();
+      updateStats();
+    }
+
+    function resetGame() {
+      stopTimer();
+      gameActive = false;
+      score = 0; correct = 0; wrong = 0; seconds = 0;
+      matchedCount = 0;
+      selectedPort = null; selectedService = null;
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-reset').disabled = true;
+      document.getElementById('btn-hint').disabled = true;
+      document.getElementById('ports-list').innerHTML = '';
+      document.getElementById('services-list').innerHTML = '';
+      document.getElementById('security-question').innerHTML = '';
+      document.getElementById('ioc-question').innerHTML = '';
+      setFeedback('Press Start Game to begin', true);
+      updateStats();
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function endGame() {
+      gameActive = false;
+      stopTimer();
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-hint').disabled = true;
+      const accuracy = (correct + wrong) ? Math.round((correct / (correct + wrong)) * 100) : 0;
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('final-msg').textContent =
+        `Accuracy: ${accuracy}% · Time: ${formatTime(seconds)} · Correct: ${correct} · Wrong: ${wrong}`;
+      document.getElementById('end-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('end-modal').classList.add('hidden');
+    }
+
+    function showHint() {
+      if (!gameActive || mode !== 'match' || !selectedPort) {
+        setFeedback('Select a port first, then press Hint', false);
+        return;
+      }
+      setFeedback(`Hint: ${selectedPort.data.service} — ${selectedPort.data.note}`, true);
+    }
+
+    // Init
+    setMode('match');
+    resetGame();
+  </script>
+</body>
+</html>
