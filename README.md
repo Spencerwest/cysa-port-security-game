@@ -2,7 +2,7 @@
 
 An interactive matching game designed to help you master the network ports and protocols that appear on the **CompTIA CySA+ (CS0-003 / CS0-004)** exam.
 
-Play here → **[https://Spencerwest.github.io/cysa-port-security-game/](https://YOUR-USERNAME.github.io/cysa-port-security-game/)**  
+Play here → **[https://Spencerwest.github.io/cysa-port-security-game/](https://Spencerwest.github.io/cysa-port-security-game/)**  
 *(Replace `YOUR-USERNAME` with your actual GitHub username after enabling GitHub Pages)*
 
 ---
