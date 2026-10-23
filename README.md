@@ -2,7 +2,7 @@
 
 An interactive matching game designed to help you master the network ports and protocols that appear on the **CompTIA CySA+ (CS0-003 / CS0-004)** exam.
 
-Play here → **[https://Spencerwest.github.io/cysa-port-security-game/](https://Spencerwest.github.io/cysa-port-security-game/)**  
+Play here → **[https://YOUR-USERNAME.github.io/cysa-port-security-game/](https://YOUR-USERNAME.github.io/cysa-port-security-game/)**  
 *(Replace `YOUR-USERNAME` with your actual GitHub username after enabling GitHub Pages)*
 
 ---
@@ -29,6 +29,7 @@ This game focuses on the ports that actually matter for a cybersecurity analyst.
 | **Secure vs Insecure** | Decide whether a protocol is considered secure or cleartext/insecure. |
 | **Unexpected Ports (IOC)** | Scenario-based questions: Is this network activity an indicator of compromise? |
 | **Study Reference** | Full searchable table of every port with CySA+-relevant security notes. |
+| **History** | View your previous attempts, personal bests, and progress over time (saved in your browser). |
 
 ---
 

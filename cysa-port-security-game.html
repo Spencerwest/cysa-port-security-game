@@ -237,6 +237,43 @@
     .badge.sec { background: rgba(52, 211, 153, 0.15); color: var(--success); }
     .badge.ins { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
     .badge.ioc { background: rgba(251, 191, 36, 0.15); color: var(--warn); }
+    .history-list {
+      max-height: 420px;
+      overflow-y: auto;
+      margin-top: 0.5rem;
+    }
+    .history-item {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.7rem 0.9rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .history-item .top {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.25rem;
+    }
+    .history-item .score { color: var(--accent); font-weight: 700; }
+    .history-item .meta { color: var(--muted); font-size: 0.8rem; }
+    .bests {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .best-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.5rem 0.9rem;
+      text-align: center;
+      min-width: 130px;
+    }
+    .best-card .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
+    .best-card .value { font-size: 1.15rem; font-weight: 700; color: var(--accent); }
     .progress-bar {
       height: 6px;
       background: var(--border);
@@ -272,6 +309,7 @@
       <button id="btn-security" onclick="setMode('security')">Secure vs Insecure</button>
       <button id="btn-ioc" onclick="setMode('ioc')">Unexpected Ports (IOC)</button>
       <button id="btn-study" onclick="setMode('study')">Study Reference</button>
+      <button id="btn-history" onclick="setMode('history')">History</button>
     </div>
 
     <div class="stats" id="stats-bar">
@@ -340,6 +378,16 @@
         </thead>
         <tbody id="study-body"></tbody>
       </table>
+    </div>
+
+    <!-- HISTORY MODE -->
+    <div id="history-area" class="hidden" style="background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1rem;">
+      <h3 style="text-align:center; margin-bottom:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; font-size:0.85rem;">Previous Attempts</h3>
+      <div class="bests" id="bests-container"></div>
+      <div class="history-list" id="history-list"></div>
+      <div style="text-align:center; margin-top:1rem;">
+        <button class="secondary" onclick="clearHistory()">Clear History</button>
+      </div>
     </div>
 
     <footer>
@@ -465,19 +513,24 @@
     function setMode(m) {
       mode = m;
       document.querySelectorAll('.mode-tabs button').forEach(b => b.classList.remove('active'));
-      document.getElementById('btn-' + (m === 'match' ? 'match' : m === 'security' ? 'security' : m === 'ioc' ? 'ioc' : 'study')).classList.add('active');
+      const btnMap = { match: 'btn-match', security: 'btn-security', ioc: 'btn-ioc', study: 'btn-study', history: 'btn-history' };
+      if (btnMap[m]) document.getElementById(btnMap[m]).classList.add('active');
 
       document.getElementById('match-area').classList.toggle('hidden', m !== 'match');
       document.getElementById('security-area').classList.toggle('hidden', m !== 'security');
       document.getElementById('ioc-area').classList.toggle('hidden', m !== 'ioc');
       document.getElementById('study-area').classList.toggle('hidden', m !== 'study');
-      document.getElementById('stats-bar').classList.toggle('hidden', m === 'study');
-      document.getElementById('controls').classList.toggle('hidden', m === 'study');
-      document.getElementById('feedback').classList.toggle('hidden', m === 'study');
-      document.querySelector('.progress-bar').classList.toggle('hidden', m === 'study');
+      document.getElementById('history-area').classList.toggle('hidden', m !== 'history');
+      document.getElementById('stats-bar').classList.toggle('hidden', m === 'study' || m === 'history');
+      document.getElementById('controls').classList.toggle('hidden', m === 'study' || m === 'history');
+      document.getElementById('feedback').classList.toggle('hidden', m === 'study' || m === 'history');
+      document.querySelector('.progress-bar').classList.toggle('hidden', m === 'study' || m === 'history');
 
       if (m === 'study') {
         renderStudy();
+        stopTimer();
+      } else if (m === 'history') {
+        renderHistory();
         stopTimer();
       } else {
         resetGame();
@@ -711,6 +764,76 @@
       document.getElementById('final-msg').textContent =
         `Accuracy: ${accuracy}% · Time: ${formatTime(seconds)} · Correct: ${correct} · Wrong: ${wrong}`;
       document.getElementById('end-modal').classList.remove('hidden');
+
+      // Save attempt to localStorage
+      saveAttempt({
+        mode: mode,
+        score: score,
+        accuracy: accuracy,
+        time: seconds,
+        correct: correct,
+        wrong: wrong,
+        date: new Date().toISOString()
+      });
+    }
+
+    function saveAttempt(attempt) {
+      const key = 'cysaPortGameHistory';
+      let history = JSON.parse(localStorage.getItem(key) || '[]');
+      history.unshift(attempt); // newest first
+      // Keep last 50 attempts
+      if (history.length > 50) history = history.slice(0, 50);
+      localStorage.setItem(key, JSON.stringify(history));
+    }
+
+    function loadHistory() {
+      return JSON.parse(localStorage.getItem('cysaPortGameHistory') || '[]');
+    }
+
+    function renderHistory() {
+      const history = loadHistory();
+      const listEl = document.getElementById('history-list');
+      const bestsEl = document.getElementById('bests-container');
+
+      if (history.length === 0) {
+        listEl.innerHTML = '<p style="text-align:center; color:var(--muted); padding:1.5rem;">No attempts yet. Play a game to see your history here.</p>';
+        bestsEl.innerHTML = '';
+        return;
+      }
+
+      // Calculate bests
+      const bestScore = Math.max(...history.map(h => h.score));
+      const bestAccuracy = Math.max(...history.map(h => h.accuracy));
+      const fastest = Math.min(...history.filter(h => h.time > 0).map(h => h.time));
+
+      bestsEl.innerHTML = `
+        <div class="best-card"><div class="label">Best Score</div><div class="value">${bestScore}</div></div>
+        <div class="best-card"><div class="label">Best Accuracy</div><div class="value">${bestAccuracy}%</div></div>
+        <div class="best-card"><div class="label">Fastest Time</div><div class="value">${formatTime(fastest)}</div></div>
+        <div class="best-card"><div class="label">Total Attempts</div><div class="value">${history.length}</div></div>
+      `;
+
+      listEl.innerHTML = history.map(h => {
+        const date = new Date(h.date).toLocaleString();
+        const modeLabel = h.mode === 'match' ? 'Match Ports' : h.mode === 'security' ? 'Secure vs Insecure' : 'Unexpected Ports';
+        return `
+          <div class="history-item">
+            <div class="top">
+              <span class="score">${h.score} pts</span>
+              <span class="meta">${modeLabel}</span>
+            </div>
+            <div class="meta">${h.accuracy}% accuracy · ${formatTime(h.time)} · ${h.correct} correct / ${h.wrong} wrong</div>
+            <div class="meta">${date}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function clearHistory() {
+      if (confirm('Clear all saved attempts? This cannot be undone.')) {
+        localStorage.removeItem('cysaPortGameHistory');
+        renderHistory();
+      }
     }
 
     function closeModal() {
