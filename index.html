@@ -561,6 +561,16 @@
       initial.forEach(p => addMatchItem(p));
     }
 
+    function insertAtRandom(list, el) {
+      const children = list.children;
+      const index = Math.floor(Math.random() * (children.length + 1));
+      if (index >= children.length) {
+        list.appendChild(el);
+      } else {
+        list.insertBefore(el, children[index]);
+      }
+    }
+
     function addMatchItem(p) {
       const portsEl = document.getElementById('ports-list');
       const servicesEl = document.getElementById('services-list');
@@ -570,14 +580,14 @@
       portDiv.dataset.id = p.port;
       portDiv.textContent = p.port;
       portDiv.onclick = () => selectPort(portDiv, p);
-      portsEl.appendChild(portDiv);
+      insertAtRandom(portsEl, portDiv);
 
       const serviceDiv = document.createElement('div');
       serviceDiv.className = 'item';
       serviceDiv.dataset.id = p.port;
       serviceDiv.textContent = p.service;
       serviceDiv.onclick = () => selectService(serviceDiv, p);
-      servicesEl.appendChild(serviceDiv);
+      insertAtRandom(servicesEl, serviceDiv);
     }
 
     function selectPort(el, data) {
